@@ -1,0 +1,1 @@
+# Contributing\n- PR: tests+ruff must pass.\n

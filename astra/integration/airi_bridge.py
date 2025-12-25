@@ -1,11 +1,8 @@
-from __future__ import annotations
+from .airi_client import AiriClient
 
 
 def airi_status() -> str:
-    # Sprint 1: tylko handshake. Sprint 2: tools API + memory + policies.
-    try:
-        from airi import __version__ as airi_version
-    except Exception as exc:  # pragma: no cover
-        return f"! AIRI unavailable: {exc}"
-
-    return f"- AIRI online (version {airi_version})\n- policy: SAFE default\n- mode: stub"
+    c = AiriClient()
+    s = c.status()
+    p = c.decide("bridge_status")
+    return f"- {s.output}\n- policy: {p.decision} ({p.reason})\n- mode: stub"

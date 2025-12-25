@@ -1,0 +1,1 @@
+# Security\n- Zgłoszenia: przez Issues (private info = email w profilu).\n

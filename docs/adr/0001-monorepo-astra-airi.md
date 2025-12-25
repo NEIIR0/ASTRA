@@ -1,0 +1,1 @@
+# ADR-0001 Monorepo\nDecyzja: monorepo, moduły astra/ i airi/ + kontrakt integracji.\n

@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: astra-airi
+Version: 0.0.15
+Summary: ASTRA(HUB)+AIRI(agent) monorepo, local-first.
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+﻿# ASTRA
+Local-first HUB „gra/OS” + AIRI (agent).
+
+Sprint 0: boot + doctor + pytest + ruff + CI.

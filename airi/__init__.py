@@ -1,1 +1,1 @@
-__version__ = "0.0.0"
+from astra_common import __version__
