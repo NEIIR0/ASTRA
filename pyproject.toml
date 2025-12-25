@@ -10,7 +10,7 @@ description = "ASTRA(HUB)+AIRI(agent) monorepo, local-first."
 readme = "README.md"
 
 [tool.setuptools.packages.find]
-include = ["airi","astra","astra_common"]
+include = ["airi", "astra", "astra_common"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -19,6 +19,7 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["tools/*", "astra_airi.egg-info/*"]
 
 [tool.ruff.lint]
-select = ["E","F","I","UP"]
+select = ["E", "F", "I", "UP"]

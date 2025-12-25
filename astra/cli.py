@@ -29,9 +29,9 @@ def main(argv: list[str] | None = None) -> int:
 
     while True:
         print("=== ASTRA HUB (Sprint 1.5) ===")
-        for k, l in MENU:
-            print(f"[{k}] {l}")
-        ch = input("> ").strip()
-        code = dispatch(ch)
-        if ch == "0":
+        for key, label in MENU:
+            print(f"[{key}] {label}")
+        choice = input("> ").strip()
+        code = dispatch(choice)
+        if choice == "0":
             return code
