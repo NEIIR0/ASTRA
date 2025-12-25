@@ -1,8 +1,8 @@
 [project]
 name = "astra-airi"
-version = "0.0.0"
+version = "0.0.1"
 requires-python = ">=3.12"
-description = "ASTRA repo + AIRI agent core (local-first)."
+description = "ASTRA (HUB) + AIRI (agent) monorepo, local-first."
 readme = "README.md"
 
 [tool.pytest.ini_options]
