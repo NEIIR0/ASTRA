@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     pr0 = props[0]
-    s1, txt, events = apply_action(s0, pr0.action, **pr0.kwargs)
+    s1, txt, events = apply_action(s0, pr0.action, **pr0.kwargs, profile=profile)
 
     print("AIRI APPLY (first proposal)")
     for t in txt:

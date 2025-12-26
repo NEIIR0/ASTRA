@@ -12,11 +12,11 @@ from .router import dispatch
 
 MENU = [
     ("1", "Ustawienia"),
-    ("2", "Udaj siĂ„â„˘ na mostek"),
-    ("3", "Udaj siĂ„â„˘ do AIRI"),
+    ("2", "Udaj siÄ‚â€žĂ˘â€žË na mostek"),
+    ("3", "Udaj siÄ‚â€žĂ˘â€žË do AIRI"),
     ("4", "Uniwersum"),
     ("5", "Tryb gry"),
-    ("0", "WyjÄąâ€şcie"),
+    ("0", "WyjĂ„Ä…Ă˘â‚¬Ĺźcie"),
 ]
 
 
@@ -61,7 +61,7 @@ def _run_game_status(*, profile: str) -> int:
 
 def _run_game_tick(*, profile: str, write: bool, seed: int | None) -> int:
     s0 = load_state(profile=profile)
-    s1, txt, events = apply_action(s0, "tick", seed=seed)
+    s1, txt, events = apply_action(s0, "tick", seed=seed, profile=profile)
 
     print("GAME TICK")
     print(f"- profile: {profile}")
@@ -95,7 +95,7 @@ def _run_game_snapshot(*, profile: str) -> int:
 
 def _run_game_move(*, profile: str, write: bool, sector: str) -> int:
     s0 = load_state(profile=profile)
-    s1, txt, events = apply_action(s0, "move", sector=sector)
+    s1, txt, events = apply_action(s0, "move", sector=sector, profile=profile)
 
     print("ACTION MOVE")
     print(f"- profile: {profile}")

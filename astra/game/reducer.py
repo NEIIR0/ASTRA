@@ -38,7 +38,7 @@ def reduce(state: Any, action: str, **kwargs: Any) -> ActionResult:
                 events=bus.drain(),
             )
 
-        s1, txt, events = tick_day(state, seed=seed)
+        s1, txt, events = tick_day(state, seed=seed, profile=str(kwargs.get("profile", "offline")))
         s2, rtxt, rev = apply_rules(s1)
         return ok(s2, text=list(txt) + list(rtxt), events=events + rev + bus.drain())
 

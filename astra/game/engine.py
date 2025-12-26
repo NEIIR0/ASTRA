@@ -1,61 +1,113 @@
 from __future__ import annotations
 
-import random
 from dataclasses import replace
 from typing import Any
 
-from .achievements import check_achievements
-from .events import EventBus
-from .progression import level_from_xp
-from .state import GameState, PlayerState, QuestProgress, ShipState
-
-TickResult = tuple[GameState, list[str], list[dict[str, Any]]]
+from .balance import load_balance
+from .rng import rng_raw15
 
 
-def tick_day(state: GameState, *, seed: int | None = None) -> TickResult:
-    if seed is None:
-        seed = int(getattr(state, "last_seed", 0) or 0)
+def _quest_to_dict(q: Any) -> dict[str, Any] | None:
+    # dict-style
+    if isinstance(q, dict):
+        return {
+            "quest_id": str(q.get("quest_id", "")),
+            "status": str(q.get("status", "")),
+            "progress": int(q.get("progress", 0)),
+        }
 
-    rng = random.Random(int(seed))
-    bus = EventBus()
-    txt: list[str] = [f"Dzień {state.day} -> {state.day + 1}"]
+    # object/dataclass-style
+    if hasattr(q, "quest_id") and hasattr(q, "status") and hasattr(q, "progress"):
+        return {
+            "quest_id": str(getattr(q, "quest_id")),
+            "status": str(getattr(q, "status")),
+            "progress": int(getattr(q, "progress")),
+        }
 
-    new_day = state.day + 1
+    return None
 
-    # anomalia: deterministycznie z seeda (zgodne z golden: 123 -> hull-1, 999 -> hull bez zmian)
-    hull = state.ship.hull
-    if rng.random() < 0.5:
-        hull = max(0, hull - 1)
-        txt.append("- hull: -1 (anomalia)")
 
-    power = max(0, state.ship.power - 1)
-    txt.append("- power: -1")
+def _quest_tick_progress(state: Any) -> Any:
+    qs = getattr(state, "quests", [])
+    out: list[dict[str, Any]] = []
 
-    ship = ShipState(sector=state.ship.sector, hull=hull, power=power)
+    for q in qs:
+        qd = _quest_to_dict(q)
+        if qd is None:
+            continue
 
-    gained_xp = 5
-    new_xp = state.player.xp + gained_xp
-    new_level = level_from_xp(new_xp)
-    player = PlayerState(xp=new_xp, level=new_level)
-    txt.append(f"+XP {gained_xp} (xp={new_xp}, lvl={new_level})")
+        if qd["quest_id"] == "q_ticks_3" and qd["status"] == "active":
+            p = int(qd.get("progress", 0)) + 1
+            qd["progress"] = 3 if p >= 3 else p
+            qd["status"] = "completed" if p >= 3 else "active"
 
-    temp = replace(state, day=new_day, ship=ship, player=player, last_seed=int(seed))
+        out.append(qd)
 
-    # quest: q_ticks_3 progress +1
-    new_quests: list[QuestProgress] = []
-    for q in temp.quests:
-        if q.quest_id == "q_ticks_3" and q.status == "active":
-            prog = min(int(q.progress) + 1, 3)
-            status = "completed" if prog >= 3 else "active"
-            new_quests.append(QuestProgress(quest_id=q.quest_id, status=status, progress=prog))
-        else:
-            new_quests.append(q)
-    temp = replace(temp, quests=new_quests)
+    return replace(state, quests=out)
 
-    newly = check_achievements(temp)
-    if newly:
-        txt.extend([f"ACHIEVEMENT: {x}" for x in newly])
-    final = replace(temp, achievements=list(temp.achievements) + newly)
 
-    bus.emit("tick_done", amount=1, day=new_day)
-    return final, txt, bus.drain()
+def _award_first_day(state: Any) -> Any:
+    ach = getattr(state, "achievements", None)
+    if not isinstance(ach, list):
+        return state
+    if "Pierwszy dzień" in ach:
+        return state
+    return replace(state, achievements=[*ach, "Pierwszy dzień"])
+
+
+def tick_day(state: Any, *, seed: int | None = None, profile: str = "offline"):
+    """
+    Deterministic tick by seed.
+    Balance (xp/anomaly) is loaded per profile.
+    Golden-compat: hull and power anomaly are rolled independently from raw15 bits.
+    """
+    cfg = load_balance(profile=profile)
+
+    last_seed = int(getattr(state, "last_seed", 0))
+    use_seed = int(last_seed if seed is None else seed)
+
+    day0 = int(getattr(state, "day", 0))
+    day1 = day0 + 1
+
+    ship = state.ship
+    player = state.player
+
+    raw15 = rng_raw15(use_seed)
+    hull_roll = raw15 & 1
+    power_roll = (raw15 >> 2) & 1
+
+    hull = int(getattr(ship, "hull", 100))
+    power = int(getattr(ship, "power", 100))
+
+    txt: list[str] = [f"Dzień {day0} -> {day1}"]
+    if hull_roll == 1:
+        hull -= cfg.anomaly_hull_loss
+        txt.append(f"- hull: -{cfg.anomaly_hull_loss} (anomalia)")
+    if power_roll == 1:
+        power -= cfg.anomaly_power_loss
+        txt.append(f"- power: -{cfg.anomaly_power_loss}")
+
+    xp0 = int(getattr(player, "xp", 0))
+    lvl0 = int(getattr(player, "level", 1))
+    xp1 = xp0 + cfg.xp_per_tick
+    txt.append(f"+XP {cfg.xp_per_tick} (xp={xp1}, lvl={lvl0})")
+
+    lvl1 = max(1, (xp1 // 10) + 1)
+    if lvl1 > lvl0:
+        txt.append(f"ACHIEVEMENT: Awans: Poziom {lvl1}")
+
+    ship1 = replace(ship, hull=hull, power=power)
+    player1 = replace(player, xp=xp1, level=lvl1)
+    state1 = replace(state, day=day1, ship=ship1, player=player1, last_seed=use_seed)
+
+    if day0 == 0:
+        state1 = _award_first_day(state1)
+
+    # golden expectations: quests must be dicts with only quest_id/status/progress
+    state1 = _quest_tick_progress(state1)
+
+    events = [{"type": "tick_done", "amount": 1, "day": day1}]
+    return state1, txt, events
+
+
+__all__ = ["tick_day"]

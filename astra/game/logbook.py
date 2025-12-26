@@ -10,6 +10,13 @@ def _logbook_path(*, profile: str) -> Path:
     return Path("data") / "profiles" / profile / "logbook.jsonl"
 
 
+def _append_line(*, profile: str, obj: dict[str, Any]) -> None:
+    p = _logbook_path(profile=profile)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+
+
 def iter_logbook(profile: str) -> Iterator[dict[str, Any]]:
     p = _logbook_path(profile=profile)
     if not p.exists():
@@ -24,13 +31,6 @@ def iter_logbook(profile: str) -> Iterator[dict[str, Any]]:
             continue
         if isinstance(obj, dict):
             yield obj
-
-
-def _append_line(*, profile: str, obj: dict[str, Any]) -> None:
-    p = _logbook_path(profile=profile)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with p.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 
 def append_events(profile: str, events: list[dict[str, Any]]) -> None:
@@ -50,12 +50,16 @@ def append_snapshot(profile: str, state: Any) -> None:
     _append_line(profile=profile, obj={"type": "snapshot", "state": payload})
 
 
-def append_tx(profile: str, text: str | list[str]) -> None:
-    if isinstance(text, str):
-        _append_line(profile=profile, obj={"type": "tx", "text": text})
-    else:
-        for t in text:
-            _append_line(profile=profile, obj={"type": "tx", "text": str(t)})
+def append_tx(profile: str, action: str, events: list[dict[str, Any]], **kwargs: Any) -> None:
+    # Back-compat for older CLI: append_tx(profile, action, events, seed=..., sector=...)
+    append_command(profile, action, **kwargs)
+    append_events(profile, events)
 
 
-__all__ = ["iter_logbook", "append_events", "append_command", "append_snapshot", "append_tx"]
+__all__ = [
+    "iter_logbook",
+    "append_events",
+    "append_command",
+    "append_snapshot",
+    "append_tx",
+]

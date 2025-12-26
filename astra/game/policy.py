@@ -14,14 +14,12 @@ class PolicyDecision:
 
 
 def check_action_allowed(*, state: Any, action: str, kwargs: dict[str, Any], bus: EventBus) -> PolicyDecision:
-    # Sector existence (for move target)
     if action == "move":
-        target = str(kwargs.get("sector", ""))
-        if DEFAULT_SECTORS.get(target) is None:
+        target = str(kwargs.get("sector", "")).strip()
+        if not target or DEFAULT_SECTORS.get(target) is None:
             bus.emit("sector_unknown", sector=target)
             return PolicyDecision(False, "unknown_sector")
 
-    # Example: forbid "tick" when hull==0 (game over state)
     ship = getattr(state, "ship", None)
     hull = getattr(ship, "hull", None) if ship is not None else None
     if action == "tick" and hull == 0:
