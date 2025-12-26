@@ -13,5 +13,6 @@ def append_events(
     if not write:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    lines = "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in events)
-    path.write_text(path.read_text("utf-8") + lines if path.exists() else lines, encoding="utf-8")
+    with path.open("a", encoding="utf-8", newline="\n") as f:
+        for e in events:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
