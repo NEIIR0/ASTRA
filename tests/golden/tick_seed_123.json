@@ -1,0 +1,43 @@
+{
+  "events": [
+    {
+      "type": "tick_done",
+      "amount": 1,
+      "day": 1
+    }
+  ],
+  "state": {
+    "schema_version": 3,
+    "day": 1,
+    "ship": {
+      "sector": "Mostek",
+      "hull": 99,
+      "power": 99
+    },
+    "player": {
+      "xp": 5,
+      "level": 1
+    },
+    "achievements": [
+      "Pierwszy dzień"
+    ],
+    "quests": [
+      {
+        "quest_id": "q_doctor_once",
+        "status": "active",
+        "progress": 0
+      },
+      {
+        "quest_id": "q_ticks_3",
+        "status": "active",
+        "progress": 1
+      },
+      {
+        "quest_id": "q_airi_status",
+        "status": "active",
+        "progress": 0
+      }
+    ],
+    "last_seed": 123
+  }
+}

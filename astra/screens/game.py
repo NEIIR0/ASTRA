@@ -1,26 +1,23 @@
 from __future__ import annotations
 
-from ..game.quests import defs_by_id
 from ..game.storage import load_state
 
 
 def run() -> None:
-    s = load_state()
-    print("TRYB GRY (v0.02.0)")
+    profile = "default"  # --once nie przekazuje profilu; default musi działać stabilnie
+    s = load_state(profile=profile)
+
+    print("TRYB GRY (Sprint 2D)")
+    print(f"- profile: {profile}")
     print(f"- day: {s.day}")
     print(f"- sector: {s.ship.sector}")
     print(f"- hull: {s.ship.hull}")
     print(f"- power: {s.ship.power}")
     print(f"- level: {s.player.level} (xp={s.player.xp})")
+    print(f"- last_seed: {s.last_seed}")
 
-    qdefs = defs_by_id()
-    print("- quests:")
-    for q in s.quests:
-        qd = qdefs.get(q.quest_id)
-        title = qd.title if qd else q.quest_id
-        target = qd.target_value if qd else 0
-        print(f"  * {title} [{q.status}] {q.progress}/{target}")
-
-    print("Next: python -m astra game status")
-    print("Tick SAFE: python -m astra game tick")
-    print("Tick+SAVE (WRITE): python -m astra game tick --write")
+    print("Next:")
+    print("  python -m astra --profile dev game status")
+    print("  python -m astra --profile dev game tick --seed 123")
+    print("WRITE:")
+    print("  python -m astra --profile dev --write game tick --seed 123")

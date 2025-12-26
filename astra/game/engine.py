@@ -34,7 +34,6 @@ def tick_day(state: GameState, *, seed: int) -> tuple[GameState, list[str], list
 
     bus.append(GameEvent("tick_done", 1, {"day": state.day + 1}))
 
-    # ship drift (deterministic via seed)
     power_loss = 1
     hull_loss = 1 if rng.random() < 0.10 else 0
 
@@ -53,7 +52,13 @@ def tick_day(state: GameState, *, seed: int) -> tuple[GameState, list[str], list
     new_player = PlayerState(xp=new_xp, level=new_level)
     txt.append(f"+XP {gained_xp} (xp={new_xp}, lvl={new_level})")
 
-    temp = replace(state, day=state.day + 1, ship=new_ship, player=new_player)
+    temp = replace(
+        state,
+        day=state.day + 1,
+        ship=new_ship,
+        player=new_player,
+        last_seed=int(seed),
+    )
 
     newly = check_achievements(temp)
     if newly:

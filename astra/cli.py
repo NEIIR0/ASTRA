@@ -20,13 +20,15 @@ MENU = [
 ]
 
 
-def _print_game_status() -> None:
-    s = load_state()
+def _print_game_status(profile: str) -> None:
+    s = load_state(profile=profile)
     qdefs = defs_by_id()
     print("GAME STATUS")
+    print(f"- profile: {profile}")
     print(f"- day: {s.day}")
     print(f"- level: {s.player.level} (xp={s.player.xp})")
     print(f"- ship: hull={s.ship.hull} power={s.ship.power}")
+    print(f"- last_seed: {s.last_seed}")
     print("- quests:")
     for q in s.quests:
         qd = qdefs.get(q.quest_id)
@@ -35,28 +37,29 @@ def _print_game_status() -> None:
         print(f"  * {q.quest_id} :: {title} [{q.status}] {q.progress}/{target}")
 
 
-def _run_game_tick(write: bool, seed: int | None) -> int:
-    state = load_state()
+def _run_game_tick(write: bool, seed: int | None, profile: str) -> int:
+    state = load_state(profile=profile)
     use_seed = int(seed if seed is not None else (state.day + 1))
     new_state, events_text, events_json = tick_day(state, seed=use_seed)
 
     print("GAME TICK")
+    print(f"- profile: {profile}")
     print(f"- seed: {use_seed}")
     for e in events_text:
         print(f"- {e}")
 
     if write:
-        save_state(new_state)
-        append_events(events_json, write=True)
-        print("- saved: data/game_state.json")
-        print("- logbook: data/logbook.jsonl")
+        save_state(new_state, profile=profile)
+        append_events(events_json, write=True, profile=profile)
+        print(f"- saved: data/profiles/{profile}/game_state.json")
+        print(f"- logbook: data/profiles/{profile}/logbook.jsonl")
     else:
         print("- not saved (SAFE default). Use: --write")
     return 0
 
 
-def _quest_claim(quest_id: str, write: bool) -> int:
-    state = load_state()
+def _quest_claim(quest_id: str, write: bool, profile: str) -> int:
+    state = load_state(profile=profile)
     qdefs = defs_by_id()
     qd = qdefs.get(quest_id)
     if not qd:
@@ -77,7 +80,7 @@ def _quest_claim(quest_id: str, write: bool) -> int:
 
     if not write:
         print("- SAFE: would mark claimed + grant XP")
-        print("Use: python -m astra game quest claim <id> --write")
+        print("Use: python -m astra --profile <p> --write game quest claim <id>")
         return 0
 
     new_xp = state.player.xp + qd.reward_xp
@@ -91,29 +94,33 @@ def _quest_claim(quest_id: str, write: bool) -> int:
         player=new_player,
         achievements=state.achievements,
         quests=rest + [claimed],
+        last_seed=state.last_seed,
     )
 
-    save_state(new_state)
+    save_state(new_state, profile=profile)
     append_events(
-        [{"type": "quest_claimed", "quest_id": quest_id, "reward_xp": qd.reward_xp}], write=True
+        [{"type": "quest_claimed", "quest_id": quest_id, "reward_xp": qd.reward_xp}],
+        write=True,
+        profile=profile,
     )
     print(f"- claimed: {quest_id}")
     print(f"- reward_xp: {qd.reward_xp} (xp={new_xp})")
     return 0
 
 
-def _emit_hook(write: bool, e: GameEvent) -> None:
-    s = load_state()
+def _emit_hook(write: bool, profile: str, e: GameEvent) -> None:
+    s = load_state(profile=profile)
     s2 = apply_external_event(s, e)
     if write:
-        save_state(s2)
-        append_events([e.to_json()], write=True)
+        save_state(s2, profile=profile)
+        append_events([e.to_json()], write=True, profile=profile)
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="astra")
     p.add_argument("--once", choices=[m[0] for m in MENU])
     p.add_argument("--write", action="store_true")
+    p.add_argument("--profile", default="default")
 
     sub = p.add_subparsers(dest="cmd")
     sub.add_parser("doctor")
@@ -131,35 +138,36 @@ def main(argv: list[str] | None = None) -> int:
     p_claim.add_argument("quest_id")
 
     ns = p.parse_args(argv)
+    profile = str(ns.profile)
 
     if ns.cmd == "doctor":
         rc = run_doctor()
         if rc == 0:
-            _emit_hook(bool(ns.write), GameEvent("doctor_ok", 1))
+            _emit_hook(bool(ns.write), profile, GameEvent("doctor_ok", 1))
         return rc
 
     if ns.cmd == "game":
         if ns.game_cmd == "status":
-            _print_game_status()
+            _print_game_status(profile)
             return 0
         if ns.game_cmd == "tick":
-            return _run_game_tick(bool(ns.write), ns.seed)
+            return _run_game_tick(bool(ns.write), ns.seed, profile)
         if ns.game_cmd == "quest":
             if ns.quest_cmd == "list":
-                _print_game_status()
+                _print_game_status(profile)
                 return 0
             if ns.quest_cmd == "claim":
-                return _quest_claim(str(ns.quest_id), bool(ns.write))
-        print("Use: python -m astra game status|tick|quest list|quest claim <id>")
+                return _quest_claim(str(ns.quest_id), bool(ns.write), profile)
+        print("Use: python -m astra --profile <p> game status|tick|quest list|quest claim <id>")
         return 1
 
     if ns.once:
         if ns.once == "3":
-            _emit_hook(bool(ns.write), GameEvent("airi_status", 1))
+            _emit_hook(bool(ns.write), profile, GameEvent("airi_status", 1))
         return dispatch(ns.once)
 
     while True:
-        print("=== ASTRA HUB (Sprint 2C) ===")
+        print("=== ASTRA HUB (Sprint 2D) ===")
         for key, label in MENU:
             print(f"[{key}] {label}")
         choice = input("> ").strip()
