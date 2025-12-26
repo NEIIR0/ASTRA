@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from ..game.storage import load_state
+from ..integration.airi_client import AiriClient
 
 
 def run(*, profile: str) -> None:
-    s = load_state(profile=profile)
-    print("MOSTEK (Ship Status)")
-    print(f"- profile(run): {profile}")
-    print(f"- day: {s.day}")
-    print(f"- ship: hull={s.ship.hull} power={s.ship.power} sector={s.ship.sector}")
-    print("Next: python -m astra --profile dev game status")
+    _ = profile
+    c = AiriClient()
+    s = c.status()
+    print("AIRI (bridge)")
+    print(f"- AIRI online (version {s.version})")
+    print(f"- policy: {s.policy} (default SAFE for action=bridge_status)")
+    print("- mode: stub")

@@ -1,27 +1,47 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
 @dataclass(frozen=True)
 class GameEvent:
-    type: str
-    amount: int = 1
-    meta: dict[str, Any] | None = None
+    """Canonical event used by engine/UI/AIRI."""
 
-    def to_json(self) -> dict[str, Any]:
-        return {"type": self.type, "amount": self.amount, **(self.meta or {})}
+    type: str
+    amount: int | None = None
+    payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"type": self.type}
+        if self.amount is not None:
+            d["amount"] = self.amount
+        d.update(self.payload)
+        return d
+
+
+Event = GameEvent
 
 
 class EventBus:
+    """In-memory event buffer. Engine emits, UI/AIRI drains."""
+
     def __init__(self) -> None:
-        self._events: list[GameEvent] = []
+        self._events: list[dict[str, Any]] = []
 
-    def emit(self, e: GameEvent) -> None:
-        self._events.append(e)
+    def emit(self, event_type: str, amount: int | None = None, **payload: Any) -> None:
+        self._events.append(GameEvent(event_type, amount, dict(payload)).to_dict())
 
-    def drain(self) -> list[GameEvent]:
+    def emit_event(self, ev: GameEvent) -> None:
+        self._events.append(ev.to_dict())
+
+    def drain(self) -> list[dict[str, Any]]:
         out = list(self._events)
         self._events.clear()
         return out
+
+    def peek(self) -> list[dict[str, Any]]:
+        return list(self._events)
+
+
+__all__ = ["GameEvent", "Event", "EventBus"]

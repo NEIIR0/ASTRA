@@ -1,30 +1,61 @@
 from __future__ import annotations
 
 import json
-import re
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-PROFILES_ROOT = Path("data") / "profiles"
+
+def _logbook_path(*, profile: str) -> Path:
+    return Path("data") / "profiles" / profile / "logbook.jsonl"
 
 
-def safe_profile(name: str) -> str:
-    name = (name or "default").strip()
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", name):
-        return "default"
-    return name
-
-
-def logbook_path(profile: str) -> Path:
-    p = safe_profile(profile)
-    return PROFILES_ROOT / p / "logbook.jsonl"
-
-
-def append_events(events: list[dict[str, Any]], *, write: bool, profile: str) -> None:
-    if not write:
+def iter_logbook(profile: str) -> Iterator[dict[str, Any]]:
+    p = _logbook_path(profile=profile)
+    if not p.exists():
         return
-    path = logbook_path(profile)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as f:
-        for e in events:
-            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+    for raw in p.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            yield obj
+
+
+def _append_line(*, profile: str, obj: dict[str, Any]) -> None:
+    p = _logbook_path(profile=profile)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+
+
+def append_events(profile: str, events: list[dict[str, Any]]) -> None:
+    for ev in events:
+        if isinstance(ev, dict):
+            _append_line(profile=profile, obj=ev)
+
+
+def append_command(profile: str, action: str, **kwargs: Any) -> None:
+    obj: dict[str, Any] = {"type": "command", "action": action}
+    obj.update(kwargs)
+    _append_line(profile=profile, obj=obj)
+
+
+def append_snapshot(profile: str, state: Any) -> None:
+    payload: Any = state.to_dict() if hasattr(state, "to_dict") else state
+    _append_line(profile=profile, obj={"type": "snapshot", "state": payload})
+
+
+def append_tx(profile: str, text: str | list[str]) -> None:
+    if isinstance(text, str):
+        _append_line(profile=profile, obj={"type": "tx", "text": text})
+    else:
+        for t in text:
+            _append_line(profile=profile, obj={"type": "tx", "text": str(t)})
+
+
+__all__ = ["iter_logbook", "append_events", "append_command", "append_snapshot", "append_tx"]

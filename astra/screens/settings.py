@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from ..config import load_config
+from ..config import config_path, load_config
 
 
 def run(*, profile: str) -> None:
-    cfg = load_config()
+    cfg = load_config(profile=profile)
     print("USTAWIENIA")
-    print(f"- profile(run): {profile}")
-    print(f"- config.profile(default): {cfg.profile}")
-    print(f"- config.log_enabled: {cfg.log_enabled}")
-    print("Tip: profile to save-slot. Użyj: --profile dev/test/default")
+    print(f"- profile: {cfg.profile}")
+    print(f"- log_enabled: {cfg.log_enabled}")
+    print(f"- config_path: {config_path(profile)}")
+    print("Tip: edycja ręczna config.json (na razie bez interaktywnego input).")

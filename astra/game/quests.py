@@ -72,9 +72,7 @@ def ensure_progress(existing: list[QuestProgress]) -> list[QuestProgress]:
     return out
 
 
-def apply_event(
-    progress: QuestProgress, qdef: QuestDef, event_type: str, amount: int
-) -> QuestProgress:
+def apply_event(progress: QuestProgress, qdef: QuestDef, event_type: str, amount: int) -> QuestProgress:
     if progress.status != "active":
         return progress
     if event_type != qdef.target_type:

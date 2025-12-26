@@ -8,3 +8,6 @@ build/
 *.log
 logs/
 data/
+Logi/
+data/errors/
+data/profiles/*/report_latest.zip
