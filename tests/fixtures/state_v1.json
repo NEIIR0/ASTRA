@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "day": 2,
+  "ship": {
+    "sector": "Mostek",
+    "hull": 90,
+    "power": 80
+  },
+  "player": {
+    "xp": 12,
+    "level": 2
+  },
+  "achievements": [
+    "Pierwszy dzień"
+  ],
+  "active_quests": [
+    "legacy_q"
+  ]
+}

@@ -22,4 +22,5 @@ tests/test_boot.py
 tests/test_cli.py
 tests/test_engine_seed.py
 tests/test_game.py
+tests/test_migrations.py
 tests/test_profiles.py

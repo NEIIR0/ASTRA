@@ -1,4 +1,155 @@
-from __future__ import annotations
+﻿from __future__ import annotations
+
+import json
+from pathlib import Path
+
+V = "0.0.23"  # ASTRA v0.02.3
+
+
+def w(p: Path, s: str) -> None:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(s, encoding="utf-8", newline="\n")
+
+
+# version bump
+w(Path("astra_common/__init__.py"), '__version__ = "0.0.23"\n')
+
+# CHANGELOG append/refresh minimal
+w(
+    Path("CHANGELOG.md"),
+    "# Changelog\n\n"
+    "## 0.0.23 (v0.02.3)\n"
+    "- Profile flow: --once respects --profile (single runtime path)\n"
+    "- Migration tests for schema v1/v2 -> v3\n\n"
+    "## 0.0.22 (v0.02.2)\n"
+    "- migrations+golden+profiles\n",
+)
+
+# router: profile-aware
+w(
+    Path("astra/router.py"),
+    """from __future__ import annotations
+
+from .screens import airi, bridge, game, lore, settings
+
+
+def dispatch(key: str, *, profile: str) -> int:
+    if key == "1":
+        settings.run(profile=profile)
+        return 0
+    if key == "2":
+        bridge.run(profile=profile)
+        return 0
+    if key == "3":
+        airi.run(profile=profile)
+        return 0
+    if key == "4":
+        lore.run(profile=profile)
+        return 0
+    if key == "5":
+        game.run(profile=profile)
+        return 0
+    if key == "0":
+        print("Do zobaczenia.")
+        return 0
+
+    print("Nieznana opcja.")
+    return 1
+""",
+)
+
+# screens: minimal, stable, profile-aware
+w(
+    Path("astra/screens/settings.py"),
+    """from __future__ import annotations
+
+from ..config import load_config
+
+
+def run(*, profile: str) -> None:
+    cfg = load_config()
+    print("USTAWIENIA")
+    print(f"- profile(run): {profile}")
+    print(f"- config.profile(default): {cfg.profile}")
+    print(f"- config.log_enabled: {cfg.log_enabled}")
+    print("Tip: profile to save-slot. Użyj: --profile dev/test/default")
+""",
+)
+
+w(
+    Path("astra/screens/lore.py"),
+    """from __future__ import annotations
+
+
+def run(*, profile: str) -> None:
+    print("UNIWERSUM / CANON (Sprint 2E)")
+    print(f"- profile(run): {profile}")
+    print("ASTRA: statek kolonizacyjny; anomalia po czarnej dziurze uszkodziła okręt.")
+    print("AIRI: cyfrowe życie (JA+cele+pamięć+refleksja+inicjatywa) bez roszczeń świadomości.")
+""",
+)
+
+w(
+    Path("astra/screens/bridge.py"),
+    """from __future__ import annotations
+
+from ..game.storage import load_state
+
+
+def run(*, profile: str) -> None:
+    s = load_state(profile=profile)
+    print("MOSTEK (Ship Status)")
+    print(f"- profile(run): {profile}")
+    print(f"- day: {s.day}")
+    print(f"- ship: hull={s.ship.hull} power={s.ship.power} sector={s.ship.sector}")
+    print("Next: python -m astra --profile dev game status")
+""",
+)
+
+w(
+    Path("astra/screens/airi.py"),
+    """from __future__ import annotations
+
+from ..integration import airi_bridge
+
+
+def run(*, profile: str) -> None:
+    print("AIRI (bridge)")
+    print(f"- profile(run): {profile}")
+    airi_bridge.run()
+""",
+)
+
+w(
+    Path("astra/screens/game.py"),
+    """from __future__ import annotations
+
+from ..game.storage import load_state
+
+
+def run(*, profile: str) -> None:
+    s = load_state(profile=profile)
+
+    print("TRYB GRY (Sprint 2E)")
+    print(f"- profile(run): {profile}")
+    print(f"- day: {s.day}")
+    print(f"- sector: {s.ship.sector}")
+    print(f"- hull: {s.ship.hull}")
+    print(f"- power: {s.ship.power}")
+    print(f"- level: {s.player.level} (xp={s.player.xp})")
+    print(f"- last_seed: {s.last_seed}")
+    print("Next:")
+    print("  python -m astra --profile dev game status")
+    print("  python -m astra --profile dev game tick --seed 123")
+    print("WRITE:")
+    print("  python -m astra --profile dev --write game tick --seed 123")
+""",
+)
+
+# cli: pass profile to dispatch everywhere
+w(
+    Path("astra/cli.py"),
+    """from __future__ import annotations
 
 import argparse
 
@@ -171,3 +322,76 @@ def main(argv: list[str] | None = None) -> int:
         code = dispatch(choice, profile=profile)
         if choice == "0":
             return code
+""",
+)
+
+# fixtures v1/v2 + tests
+w(
+    Path("tests/fixtures/state_v1.json"),
+    json.dumps(
+        {
+            "schema_version": 1,
+            "day": 2,
+            "ship": {"sector": "Mostek", "hull": 90, "power": 80},
+            "player": {"xp": 12, "level": 2},
+            "achievements": ["Pierwszy dzień"],
+            "active_quests": ["legacy_q"],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+)
+
+w(
+    Path("tests/fixtures/state_v2.json"),
+    json.dumps(
+        {
+            "schema_version": 2,
+            "day": 1,
+            "ship": {"sector": "Mostek", "hull": 100, "power": 99},
+            "player": {"xp": 5, "level": 1},
+            "achievements": ["Pierwszy dzień"],
+            "quests": [],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+)
+
+w(
+    Path("tests/test_migrations.py"),
+    """import json
+from pathlib import Path
+
+from astra.game.migrations import migrate_dict
+from astra.game.state import GameState
+
+
+def _read(name: str) -> dict:
+    p = Path("tests/fixtures") / name
+    return json.loads(p.read_text("utf-8"))
+
+
+def test_migrate_v1_to_v3():
+    d = _read("state_v1.json")
+    out = migrate_dict(d)
+    assert out["schema_version"] == 3
+    assert "last_seed" in out
+    s = GameState.from_dict(out)
+    ids = {q.quest_id for q in s.quests}
+    assert {"q_doctor_once", "q_ticks_3", "q_airi_status"} <= ids
+
+
+def test_migrate_v2_to_v3():
+    d = _read("state_v2.json")
+    out = migrate_dict(d)
+    assert out["schema_version"] == 3
+    assert "last_seed" in out
+    s = GameState.from_dict(out)
+    assert s.schema_version == 3
+""",
+)
+
+print("SPRINT 2E files generated.")

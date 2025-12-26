@@ -1,6 +1,9 @@
-from ..integration.airi_bridge import airi_status
+from __future__ import annotations
+
+from ..integration import airi_bridge
 
 
-def run() -> None:
+def run(*, profile: str) -> None:
     print("AIRI (bridge)")
-    print(airi_status())
+    print(f"- profile(run): {profile}")
+    airi_bridge.run()
